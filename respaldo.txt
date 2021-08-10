@@ -1,0 +1,131 @@
+     
+    import numpy
+    import matplotlib
+    from matplotlib import pylab, mlab, pyplot
+    np = numpy
+    plt = pyplot
+
+    from IPython.core.pylabtools import figsize, getfigs
+
+    from pylab import *
+    from numpy import *
+    #findecomentario
+    import os
+    import pandas as pd
+    import librosa
+    import glob 
+     
+from telegram.ext import Updater, CommandHandler, MessageHandler, Filters
+from array import array
+#lista de Handlers 
+# /Start	 
+# /Mspec	
+# /Vstatus	
+# /Infoser	
+# /about	
+# /YT	
+
+
+#Enviar Resultado -> No olvidarse de enviar el array
+def result(update,context):
+        #resultado
+        y, sr = librosa.load('/root/pruebas/Customuseranalitics.wav', sr=22050*2) # y is a numpy array of the wav file, sr = sample rate
+        y_shifted = librosa.effects.pitch_shift(y, sr, n_steps=4) # shifted by 4 half steps
+        data, sampling_rate = librosa.load('/root/pruebas/Customuseranalitics.wav')
+       
+        plt.figure(figsize=(15, 5))
+    
+        librosa.display.waveplot(data, sr=sampling_rate)
+        plt.savefig("USER.png")
+        livedf= pd.DataFrame(columns=['feature'])
+        X, sample_rate = librosa.load('/root/pruebas/Customuseranalitics.wav', res_type='kaiser_fast',duration=1.5,sr=22050*2,offset=0.5)
+        sample_rate = np.array(sample_rate)
+        #identificar el sexo con axis
+        mfccs = np.mean(librosa.feature.mfcc(y=X, sr=sample_rate, n_mfcc=13), axis=1)
+
+        featurelive = mfccs
+        livedf2 = featurelive
+
+        livedf2= pd.DataFrame(data=livedf2)
+        livedf2 = livedf2.stack().to_frame().T
+        livedf2
+
+        twodim= np.expand_dims(livedf2, axis=2)
+
+        livepreds = loaded_model.predict(twodim, 
+                             batch_size=32, 
+                             verbose=1)
+        livepreds
+
+        livepreds.shape
+        
+        livepredictions = (encoder.inverse_transform((livepreds)))
+        livepredictions
+        listToStr = ' '.join([str(elem) for elem in livepredictions])
+        print("x: "+ listToStr)
+        print(livepredictions)
+        #Recorrer la lista
+        
+        context.bot.send_message(chat_id=update.effective_chat.id, text="Your emotion is: "+ listToStr)
+        
+        #for x in livepredictions:
+            
+                #update.message.reply_text(x) 
+        #string_version = "Your emotion is -> ".join(livepredictions)
+        #context.bot.send_message(chat_id=update.effective_chat.id, text=""+string_version)
+        
+def emotion(update,context):
+        update.message.reply_text(livepredictions) 
+#Iniciar el bot ! 
+def start(update, context): 
+        context.bot.send_message(chat_id=update.effective_chat.id, text="Antes de iniciar envia una nota de voz")
+        
+
+#Reiniciar el servicio del bot en telegram    
+def activate(update,context):
+        context.bot.send_message(chat_id=update.effective_chat.id, text="Para solicitar la activación del servicio sigue el siguiente link")
+        context.bot.send_message(chat_id=update.effective_chat.id, text="https://wa.link/nqwyc7")
+#Canal del autor
+def yt(update, context):
+        context.bot.send_message(chat_id=update.effective_chat.id, text="Gracias por ejecutar este comando!")
+        context.bot.send_message(chat_id=update.effective_chat.id, text="Nos ayudaría mucho el que te suscribas a la comunidad de Mapaches 🦝 en crecimiento")
+        context.bot.send_message(chat_id=update.effective_chat.id, text="Canal: https://www.youtube.com/channel/UCwqpnbgjUnuqlNSkEasPw5Q")
+# Enviar el espectrograma de audio - Buscar la direccion de la foto
+def sendspec(chat_id, file_opened):
+       with open ('USER.PNG', 'rb') as photo:
+        context.bot.send_message(chat_id=update.effective_chat.id, text="Aquí está el espectrograma de tu voz")
+        context.bot.sendPhoto(chat_id=update.effective_chat.id, photo=photo)  
+    
+#Obtener el audio de la grabación
+def voice_handler(update, context):
+        bot = context.bot
+        file = bot.getFile(update.message.voice.file_id)
+        print(update)
+        file.download('/root/pruebas/Customuseranalitics.wav')
+        context.bot.send_message(chat_id=update.effective_chat.id, text="Recibí su nota de voz y la he procesado. ")
+        context.bot.send_message(chat_id=update.effective_chat.id, text="Listado de comandos: ")
+        context.bot.send_message(chat_id=update.effective_chat.id, text="/result -> Para observar los resultados de la prueba")
+        context.bot.send_message(chat_id=update.effective_chat.id, text="/sendspec -> Para recibir el espectograma de su voz")
+        context.bot.send_message(chat_id=update.effective_chat.id, text="/activate -> Para activar el servicio del bot ")
+        context.bot.send_message(chat_id=update.effective_chat.id, text="/yt -> Para apoyar el canal del creador")
+    
+if __name__ == '__main__': 
+        updater = Updater(token='1845140843:AAEnMGDXgPHXF9l7yR4Rj_hHPoovrtAJdq8', use_context=True)
+        dp= updater.dispatcher
+
+        dp.add_handler(MessageHandler(Filters.voice, voice_handler))
+        #Handler de prueba 
+        dp.add_handler(CommandHandler('start', start))
+        dp.add_handler(CommandHandler('result',result))
+        dp.add_handler(CommandHandler('activate',activate))
+        dp.add_handler(CommandHandler('yt',yt))
+        dp.add_handler(CommandHandler('emotion',emotion))
+        dp.add_handler(CommandHandler('sendspec',sendspec))
+        #Echo for all Messages
+        #echo_handler = MessageHandler(Filters.text & (~Filters.command), echo)
+        #dp.add_handler(echo_handler)
+    
+    
+    updater.start_polling()
+    updater.idle()
+    
